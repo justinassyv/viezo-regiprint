@@ -1,7 +1,3 @@
-Tap a tag to read its content
-ISO15693/NFC-V card found. UID: E0022403CE8861BE
-READ/WRITE NDEF detected.
-Decoding NDEF message
-Record #1
-Text: "Hello" (UTF8, language code "en")
-Operation completed
+Tag can be removed from the field
+1. Tap a tag to read its content
+
