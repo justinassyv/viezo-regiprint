@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 ser = serial.Serial('COM3', baudrate=115200)
 
 FILE_PATH = 'serial_data.txt'
-FILE_PATH1 = 'MAC_List_test.xlsx'
+FILE_PATH1 = 'SONORA_REGISTRY_PROD_sonora_v1_sensor_registry_template.xlsx'
 PRINTER_PATH = r'C:\Program Files\Zebra Technologies\ZebraDesigner 3\bin.net\ZebraDesigner.exe'
 
 # Location of QR and SN fields in printing window of ZebraDesigner3
@@ -68,54 +68,41 @@ def read_block(file_path):
 
 
 # Access mac address list on Excel
-def check_values(file_path):
+def check_values(file_path: object) -> object:
     company_name = 'VIEZO'
     value_found = False
     workbook = load_workbook(file_path)
-    # List all sheet names in workbook
-    # sheet_names = workbook.sheetnames
-    second_sheet = workbook.worksheets[1]
-    print(second_sheet)
+    second_sheet = workbook.worksheets[0]
 
-    # Column to check MAC address for dictionary values
-    column_to_check = 'D'
-    # Iterate over cells in the column
-    for cell in second_sheet[column_to_check]:
+    # Column C is for MAC address
+    mac_column = 'C'
+
+    for cell in second_sheet[mac_column]:
+        # Check if MAC address matches
         if cell.value == extractedData[0]:
-            duid_value = cell.offset(column=4).value
-            if duid_value == extractedData[1]:
-                serial_number_cell = cell.offset(column=6)
-                serial_number = generate_serial(company_name, duid_value)
-                serial_number_cell.value = serial_number
-                extractedData.insert(2, serial_number_cell.value)
-                workbook.save(FILE_PATH1)
-                print(serial_number_cell.value)
-                print('Sensor exist in MAC address list')
+            duid_cell = cell.offset(column=-1)  # Column B
+            # Check if DUID matches
+            if duid_cell.value == extractedData[1]:
+                print("Sensor exists in MAC address list.")
                 print_by_zebra(extractedData)
                 extractedData.clear()
                 value_found = True
                 break
 
-    # if value is not found, add values from extractedData to the first empty cell of column
+    # If MAC address and DUID not found, add new entry
     if not value_found:
-        for cell in second_sheet[column_to_check]:
+        for cell in second_sheet[mac_column]:
             if cell.value is None or cell.value == "":
                 try:
-                    cell.value = extractedData[0]
-                    print(cell.value)
-                    cell.offset(column=4).value = extractedData[1]
-                    print(cell.offset(column=4).value)
+                    cell.value = extractedData[0]  # MAC address → Column C
+                    cell.offset(column=-1).value = extractedData[1]  # DUID → Column B
+                    print("New values added.")
+                    print("MAC:", cell.value)
+                    print("DUID:", cell.offset(column=-1).value)
 
-                    # checking to avoid that MAC address is the same as DUID and vice verse
-                    if extractedData[0] != extractedData[1]:
-                        serial_number_cell = cell.offset(column=6)
-                        serial_number = generate_serial(company_name, cell.offset(column=4).value)
-                        serial_number_cell.value = serial_number
-                        extractedData.append(serial_number_cell.value)
-                        workbook.save(FILE_PATH1)
-                        print('Values added to empty spaces in the particular columns')
-                        print_by_zebra(extractedData)
-                        extractedData.clear()
+                    workbook.save(file_path)
+                    print_by_zebra(extractedData)
+                    extractedData.clear()
                 except Exception as e:
                     print(f"Error occurred while adding data: {e}")
                     extractedData.clear()
@@ -139,12 +126,12 @@ def print_by_zebra(data):
     # Pass new sensor data to be printed
     pyautogui.click(x=X_QR_COORDINATE, y=Y_QR_COORDINATE)
     # pyautogui.typewrite(str(data[0]))
-    serial_number = f"S/N: {data[2]}"
+    serial_number = f"S/N: {data[1]}"
     pyautogui.typewrite(serial_number)
     pyautogui.press('enter')
 
     # pyautogui.click(x=X_SN_COORDINATE, y=Y_SN_COORDINATE)
-    pyautogui.typewrite(str(data[2]))
+    pyautogui.typewrite(str(data[1]))
     pyautogui.press('enter')
 
     # Press Print button on Zebra Designer software
@@ -157,7 +144,7 @@ def pointerPosition():
     x, y = pyautogui.position()
 
     # Print the coordinates
-   # print(f"Mouse pointer coordinates: ({x}, {y})")
+   #print(f"Mouse pointer coordinates: ({x}, {y})")
 # ------------------------------------------------------------------------------
 
 def generate_serial(company_name, duid_value):
